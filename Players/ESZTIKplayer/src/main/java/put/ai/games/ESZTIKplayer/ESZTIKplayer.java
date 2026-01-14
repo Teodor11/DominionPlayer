@@ -99,40 +99,37 @@ public class ESZTIKplayer extends Player {
 
     private int evaluateBoard(Board board, Color playerColor, Color enemyColor) {
         int score = getScore(board, playerColor, enemyColor);
-        Move bestEnemyMove = null;
-        int tempScore;
-        int currentScore = Integer.MIN_VALUE;
 
         List<Move> enemyMoves = board.getMovesFor(enemyColor);
+        if(enemyMoves.isEmpty()) return score;
+
+        int enemyBestMove = Integer.MAX_VALUE;
         for (Move enemyMove : enemyMoves){
             board.doMove(enemyMove);
-            tempScore = getScore(board, enemyColor, playerColor);
-            if (tempScore > currentScore) {
-                currentScore = tempScore;
-                bestEnemyMove = enemyMove;
+
+            int playerBestMove = Integer.MIN_VALUE;
+
+            List<Move> moves = board.getMovesFor(playerColor);
+            if (moves.isEmpty()) {
+                playerBestMove = getScore(board, playerColor, enemyColor);
             }
+            else{
+                for (Move move : moves){
+                    board.doMove(move);
+                    int tempScore = getScore(board, playerColor, enemyColor);
+                    if (tempScore > playerBestMove) {
+                        playerBestMove = tempScore;
+                    }
+                    board.undoMove(move);
+                }   
+            }
+            
+            if (enemyBestMove > playerBestMove) {
+                enemyBestMove = playerBestMove;
+            }
+                    
             board.undoMove(enemyMove);
         }
-        score -= currentScore;
-
-        currentScore = Integer.MIN_VALUE;
-        
-        board.doMove(bestEnemyMove);
-
-        List<Move> moves = board.getMovesFor(playerColor);
-        for (Move move : moves){
-            board.doMove(move);
-            tempScore = getScore(board, playerColor, enemyColor);
-            if (tempScore > currentScore) {
-                currentScore = tempScore;
-            }
-            board.undoMove(move);
-        }
-
-        board.undoMove(bestEnemyMove);
-
-        score += currentScore;
-
-        return score;
+        return score + enemyBestMove;
     }
 }
