@@ -24,7 +24,9 @@ public class ESZTIKplayer extends Player {
 
     @Override
     public Move nextMove(Board b) {
-        List<Move> moves = b.getMovesFor(getColor());
+        Color playerColor = getColor();
+        Color enemyColor = Player.getOpponent(getColor());
+        List<Move> moves = b.getMovesFor(playerColor);
         Move bestMove = null;
         int bestScore = Integer.MIN_VALUE;
 
@@ -32,7 +34,7 @@ public class ESZTIKplayer extends Player {
             Board copy = ((Board) b).clone();
             copy.doMove(move);
 
-            int score = evaluateBoard(copy, getColor());
+            int score = evaluateBoard(copy, playerColor, enemyColor);
 
             if (score > bestScore) {
                 bestScore = score;
@@ -67,9 +69,29 @@ public class ESZTIKplayer extends Player {
         return 0;
     }
 
-    private int evaluateBoard(Board board, Color color) {
-        int score = 0;
+    private int getscore(Board board, Color color){
+        return calculateEdgeStones(board, color)+calculateStones(board, color);
+    }
 
+    private int evaluateBoard(Board board, Color playerColor, Color enemyColor) {
+        int score = getscore(board, playerColor);
+
+        //if(playerColor == getWinner(playerColor)) return Integer.MAX_VALUE;
+
+        List<Move> enemyMoves = board.getMovesFor(enemyColor);
+        for (Move enemyMove : enemyMoves){
+            board.doMove(enemyMove);
+            score -= getscore(board, enemyColor);
+            
+            List<Move> moves = board.getMovesFor(playerColor);
+            for (Move move : moves){
+                board.doMove(move);
+                score += getscore(board, playerColor);
+                board.undoMove(move);
+            }
+
+            board.undoMove(enemyMove);
+        }
         return score;
     }
 }
