@@ -99,23 +99,40 @@ public class ESZTIKplayer extends Player {
 
     private int evaluateBoard(Board board, Color playerColor, Color enemyColor) {
         int score = getScore(board, playerColor, enemyColor);
-
-        //if(playerColor == getWinner(playerColor)) return Integer.MAX_VALUE;
+        Move bestEnemyMove = null;
+        int tempScore;
+        int currentScore = Integer.MIN_VALUE;
 
         List<Move> enemyMoves = board.getMovesFor(enemyColor);
         for (Move enemyMove : enemyMoves){
             board.doMove(enemyMove);
-            score -= getScore(board, enemyColor, playerColor);
-            
-            List<Move> moves = board.getMovesFor(playerColor);
-            for (Move move : moves){
-                board.doMove(move);
-                score += getScore(board, playerColor, enemyColor);
-                board.undoMove(move);
+            tempScore = getScore(board, enemyColor, playerColor);
+            if (tempScore > currentScore) {
+                currentScore = tempScore;
+                bestEnemyMove = enemyMove;
             }
-
             board.undoMove(enemyMove);
         }
+        score -= currentScore;
+
+        currentScore = Integer.MIN_VALUE;
+        
+        board.doMove(bestEnemyMove);
+
+        List<Move> moves = board.getMovesFor(playerColor);
+        for (Move move : moves){
+            board.doMove(move);
+            tempScore = getScore(board, playerColor, enemyColor);
+            if (tempScore > currentScore) {
+                currentScore = tempScore;
+            }
+            board.undoMove(move);
+        }
+
+        board.undoMove(bestEnemyMove);
+
+        score += currentScore;
+
         return score;
     }
 }
