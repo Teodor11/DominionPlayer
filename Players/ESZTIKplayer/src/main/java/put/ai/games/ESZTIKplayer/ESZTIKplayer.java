@@ -11,8 +11,6 @@ import put.ai.games.game.Board;
 import put.ai.games.game.Move;
 import put.ai.games.game.Player;
 
-import static java.lang.Math.sqrt;
-
 public class ESZTIKplayer extends Player {
 
     private Random random = new Random(0xdeadbeef);
@@ -69,7 +67,6 @@ public class ESZTIKplayer extends Player {
         return count;
     }
 
-
     /**
      * Funkcja oblicza aktualną liczbę pionków przy krawędziach / w narożnikach danego koloru na planszy.
      * Pionki przy krawędziach są liczone jako 1, a w narożnikach jako 2.
@@ -93,25 +90,27 @@ public class ESZTIKplayer extends Player {
 
         return count;
     }
-
-    private int getScore(Board board, Color color){
-        return countEdgeStones(board, color) + countStones(board, color);
+    /**
+     * Funkcja zwraca ocene stanu planszy na podstawie liczby pionków i ich rozmiesszczenia
+     */
+    private int getScore(Board board, Color playerColor, Color enemyColor){
+        return countEdgeStones(board, playerColor) + countStones(board, playerColor) - countStones(board, enemyColor);
     }
 
     private int evaluateBoard(Board board, Color playerColor, Color enemyColor) {
-        int score = getScore(board, playerColor);
+        int score = getScore(board, playerColor, enemyColor);
 
         //if(playerColor == getWinner(playerColor)) return Integer.MAX_VALUE;
 
         List<Move> enemyMoves = board.getMovesFor(enemyColor);
         for (Move enemyMove : enemyMoves){
             board.doMove(enemyMove);
-            score -= getScore(board, enemyColor);
+            score -= getScore(board, enemyColor, playerColor);
             
             List<Move> moves = board.getMovesFor(playerColor);
             for (Move move : moves){
                 board.doMove(move);
-                score += getScore(board, playerColor);
+                score += getScore(board, playerColor, enemyColor);
                 board.undoMove(move);
             }
 
