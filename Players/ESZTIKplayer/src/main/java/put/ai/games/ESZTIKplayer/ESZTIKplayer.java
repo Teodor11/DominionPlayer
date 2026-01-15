@@ -75,7 +75,7 @@ public class ESZTIKplayer extends Player {
 
     /**
      * Funkcja oblicza aktualną liczbę pionków przy krawędziach / w narożnikach danego koloru na planszy.
-     * Pionki przy krawędziach są liczone jako 1, a w narożnikach jako 2.
+     * Pionki przy krawędziach są liczone jako 1, a w narożnikach jako 30.
      */
     private int countEdgeStones(Board board, Color color) {
         int count = 0;
@@ -93,10 +93,10 @@ public class ESZTIKplayer extends Player {
             if (field4 == color) { count++; }
         }
 
-        if (board.getState(0, 0) == color)           { count += 2; }
-        if (board.getState(0, size-1) == color)      { count += 2; }
-        if (board.getState(size-1, 0) == color)      { count += 2; }
-        if (board.getState(size-1, size-1) == color) { count += 2; }
+        if (board.getState(0, 0) == color)           { count += 30; }
+        if (board.getState(0, size-1) == color)      { count += 30; }
+        if (board.getState(size-1, 0) == color)      { count += 30; }
+        if (board.getState(size-1, size-1) == color) { count += 30; }
 
         return count;
     }
@@ -105,17 +105,26 @@ public class ESZTIKplayer extends Player {
     /**
      * Funkcja zwraca ocene stanu planszy na podstawie liczby pionków i ich rozmiesszczenia
      */
-    private int getScore(Board board, Color playerColor, Color enemyColor, int playerMoves, int enemyMoves){
+    private int getScore(Board board, Color playerColor, Color enemyColor, int playerMoves, int enemyMoves) {
         int playerStones = ((TypicalBoard) board).countStones(playerColor);
         int enemyStones =  ((TypicalBoard) board).countStones(enemyColor);
         int playerEdgeStones = countEdgeStones(board, playerColor);
+        int movesDiff = playerMoves - enemyMoves;
 
-        return 100 * playerStones - 95 * enemyStones - 20 * playerEdgeStones
-                + 10 * (playerMoves - enemyMoves);
+        int size = (int) Math.pow(board.getSize(), 2);
+
+        if (playerStones + enemyStones < 0.3 * size) {
+            return 50 * movesDiff - 30 * playerEdgeStones;
+        }
+        else if (playerStones + enemyStones < 0.55 * size) {
+            return 30 * movesDiff - 10 * playerEdgeStones + 10 * (playerStones - enemyStones);
+        }
+        else {
+            return 100 * (playerStones - enemyStones);
+        }
     }
 
     private int evaluateBoard(Board board, Color playerColor, Color enemyColor) {
-//        Board boardCopy = board.clone();
         int playerMovesCount = board.getMovesFor(playerColor).size();
         List<Move> enemyMoves = board.getMovesFor(enemyColor);
         int score = getScore(board, playerColor, enemyColor, playerMovesCount, enemyMoves.size());
