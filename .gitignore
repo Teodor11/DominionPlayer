@@ -25,4 +25,5 @@ replay_pid*
 
 .idea
 .lst
-maven-status/*
+**/maven-status/*
+**/target/*
