@@ -48,7 +48,10 @@ public class ESZTIKplayer extends Player {
         int MAX_MOVES = 50;
         int depth = 2;
 
-        while (depth < 4) {
+        int totalStones = ((TypicalBoard) b).countStones(playerColor) + ((TypicalBoard) b).countStones(enemyColor);
+        int MAX_DEPTH = (totalStones < 0.6 * Math.pow(b.getSize(), 2)) ? 4 : 7;
+
+        while (depth < MAX_DEPTH) {
             for (int i = 0; i < Math.min(moves.size(), MAX_MOVES); i++) {
                 Move move = moves.get(i);
                 Board boardCopy = b.clone();
@@ -92,6 +95,16 @@ public class ESZTIKplayer extends Player {
         if (board.getState(0, size-1) == color)      { count += 30; }
         if (board.getState(size-1, 0) == color)      { count += 30; }
         if (board.getState(size-1, size-1) == color) { count += 30; }
+
+        int[][] adj = {
+                {1, 0}, {0, 1}, {1, 1},
+                {1, size - 1}, {0, size - 2}, {1, size - 2},
+                {size - 2, 0}, {size - 1, 1}, {size - 2, 1},
+                {size - 2, size - 1}, {size - 1, size - 2}, {size - 2, size - 2}
+        };
+        for (int[] p : adj) {
+            if (board.getState(p[0], p[1]) == color) count -= 20;
+        }
 
         return count;
     }
