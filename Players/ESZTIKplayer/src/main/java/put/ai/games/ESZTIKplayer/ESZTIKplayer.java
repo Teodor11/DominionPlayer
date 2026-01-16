@@ -23,7 +23,7 @@ public class ESZTIKplayer extends Player {
     @Override
     public Move nextMove(Board b) {
         Color playerColor = getColor();
-        Color enemyColor = Player.getOpponent(getColor());
+        Color enemyColor = Player.getOpponent(playerColor);
         List<Move> moves = b.getMovesFor(playerColor);
 
         if (moves == null || moves.isEmpty()) {
@@ -40,34 +40,29 @@ public class ESZTIKplayer extends Player {
             moveScores.put(move, getScore(boardCopy, playerColor, enemyColor, playerMoves, enemyMoves));
         }
 
-        moves.sort((m1, m2) -> {
-            return Integer.compare(moveScores.get(m2), moveScores.get(m1));
-        });
+        moves.sort((m1, m2) -> Integer.compare(moveScores.get(m2), moveScores.get(m1)));
 
         Move bestMove = moves.getFirst();
         int bestScore = Integer.MIN_VALUE;
 
         int MAX_MOVES = 50;
+        int depth = 2;
 
-        for (int i = 0; i < Math.min(moves.size(), MAX_MOVES); i++) {
-            Move move = moves.get(i);
-            Board boardCopy = b.clone();
-            boardCopy.doMove(move);
+        while (depth < 4) {
+            for (int i = 0; i < Math.min(moves.size(), MAX_MOVES); i++) {
+                Move move = moves.get(i);
+                Board boardCopy = b.clone();
+                boardCopy.doMove(move);
 
-            int playerMoves = boardCopy.getMovesFor(playerColor).size();
-            int enemyMoves = boardCopy.getMovesFor(enemyColor).size();
+                int score = minimax(boardCopy, depth - 1, false,
+                        playerColor, enemyColor, Integer.MIN_VALUE, Integer.MAX_VALUE);
 
-            int quickScore = getScore(boardCopy, playerColor, enemyColor, playerMoves, enemyMoves);
-            if (quickScore < bestScore - 100) { // skip very bad moves
-                continue;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = move;
+                }
             }
-
-            int score = evaluateBoard(boardCopy, playerColor, enemyColor);
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = move;
-            }
+            depth++;
         }
 
         return bestMove;
@@ -101,78 +96,74 @@ public class ESZTIKplayer extends Player {
         return count;
     }
 
-    
+
+    private int minimax(Board board, int depth, boolean isMaxPlayer, Color playerColor,
+            Color enemyColor, int alpha, int beta) {
+
+        List<Move> playerMoves = board.getMovesFor(playerColor);
+        List<Move> enemyMoves = board.getMovesFor(enemyColor);
+
+        if (depth == 0 || (playerMoves.isEmpty() && enemyMoves.isEmpty())) {
+            return getScore(board, playerColor, enemyColor, playerMoves.size(), enemyMoves.size());
+        }
+
+        List<Move> moves = isMaxPlayer ? playerMoves : enemyMoves;
+
+        if (moves.isEmpty()) {
+            return minimax(board, depth-1, !isMaxPlayer, playerColor, enemyColor, alpha, beta);
+        }
+
+        if (isMaxPlayer) {
+            int localMax = Integer.MIN_VALUE;
+            for (Move m: moves) {
+                Board boardCopy = board.clone();
+                boardCopy.doMove(m);
+                int score = minimax(boardCopy, depth-1, false, playerColor, enemyColor, alpha, beta);
+
+                localMax = Math.max(localMax, score);
+                alpha = Math.max(alpha, score);
+                if (alpha >= beta) break;
+            }
+            return localMax;
+        }
+        else {
+            int localMin = Integer.MAX_VALUE;
+            for (Move m: moves) {
+                Board boardCopy = board.clone();
+                boardCopy.doMove(m);
+                int score = minimax(boardCopy, depth-1, true, playerColor, enemyColor, alpha, beta);
+
+                localMin = Math.min(localMin, score);
+                beta = Math.min(beta, score);
+                if (alpha >= beta) break;
+            }
+            return localMin;
+        }
+    }
+
+
     /**
-     * Funkcja zwraca ocene stanu planszy na podstawie liczby pionków i ich rozmiesszczenia
+     * Funkcja zwraca ocenę stanu planszy na podstawie liczby pionków i ich rozmiesszczenia
      */
     private int getScore(Board board, Color playerColor, Color enemyColor, int playerMoves, int enemyMoves) {
         int playerStones = ((TypicalBoard) board).countStones(playerColor);
         int enemyStones =  ((TypicalBoard) board).countStones(enemyColor);
-        int playerEdgeStones = countEdgeStones(board, playerColor);
-        int movesDiff = playerMoves - enemyMoves;
+        int stonesDiff = playerStones - enemyStones;
 
+        int movesDiff = playerMoves - enemyMoves;
+        int edgesDiff = countEdgeStones(board, playerColor) - countEdgeStones(board, enemyColor);
+
+        int filled = playerStones + enemyStones;
         int size = (int) Math.pow(board.getSize(), 2);
 
-        if (playerStones + enemyStones < 0.3 * size) {
-            return 50 * movesDiff - 30 * playerEdgeStones;
+        if (filled < 0.3 * size) {
+            return 50 * movesDiff + 15 * edgesDiff;
         }
-        else if (playerStones + enemyStones < 0.55 * size) {
-            return 30 * movesDiff - 10 * playerEdgeStones + 10 * (playerStones - enemyStones);
+        else if (filled < 0.55 * size) {
+            return 30 * movesDiff + 20 * edgesDiff + 10 * stonesDiff;
         }
         else {
-            return 100 * (playerStones - enemyStones);
+            return 100 * stonesDiff + 50 * edgesDiff;
         }
-    }
-
-    private int evaluateBoard(Board board, Color playerColor, Color enemyColor) {
-        int playerMovesCount = board.getMovesFor(playerColor).size();
-        List<Move> enemyMoves = board.getMovesFor(enemyColor);
-        int score = getScore(board, playerColor, enemyColor, playerMovesCount, enemyMoves.size());
-
-
-        if (enemyMoves.isEmpty()) {
-            return score;
-        }
-
-        int enemyBestMove = Integer.MAX_VALUE;
-        int beta = score;
-
-        for (Move enemyMove : enemyMoves) {
-            Board boardAfterEnemyMove = board.clone();
-            boardAfterEnemyMove.doMove(enemyMove);
-
-            int playerBestMove = Integer.MIN_VALUE;
-            List<Move> playerMoves = boardAfterEnemyMove.getMovesFor(playerColor);
-
-            if (playerMoves.isEmpty()) {
-                playerBestMove = getScore(boardAfterEnemyMove, playerColor, enemyColor,
-               0, boardAfterEnemyMove.getMovesFor(enemyColor).size());
-            }
-            else {
-                for (Move move : playerMoves) {
-                    boardAfterEnemyMove.doMove(move);
-
-                    int playerMovesCount1 = boardAfterEnemyMove.getMovesFor(playerColor).size();
-                    int enemyMovesCount1 = boardAfterEnemyMove.getMovesFor(enemyColor).size();
-
-                    int tempScore = getScore(boardAfterEnemyMove, playerColor, enemyColor, playerMovesCount1, enemyMovesCount1);
-                    if (tempScore > playerBestMove) {
-                        playerBestMove = tempScore;
-                    }
-                    boardAfterEnemyMove.undoMove(move);
-                }   
-            }
-            
-            if (enemyBestMove > playerBestMove) {
-                enemyBestMove = playerBestMove;
-                beta = Math.min(beta, enemyBestMove);
-
-                if (beta <= score) {
-                    break;
-                }
-            }
-        }
-
-       return enemyBestMove;
     }
 }
